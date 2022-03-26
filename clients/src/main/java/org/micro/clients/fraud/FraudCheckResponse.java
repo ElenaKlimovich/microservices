@@ -1,4 +1,4 @@
-package org.micro.fraud;
+package org.micro.clients.fraud;
 
 public record FraudCheckResponse(Boolean isFraudster) {
 }
