@@ -1,18 +1,19 @@
 package org.micro.customer;
 
 import lombok.AllArgsConstructor;
+import org.micro.clients.notification.NotificationClient;
+import org.micro.clients.notification.NotificationRequest;
 import org.micro.clients.fraud.FraudCheckResponse;
 import org.micro.clients.fraud.FraudClient;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 @Service
 @AllArgsConstructor
 public class CustomerService {
 
     private final CustomerRepository repository;
-    private final RestTemplate restTemplate;
-    private final FraudClient client;
+    private final FraudClient fraudClient;
+    private final NotificationClient notificationClient;
 
     public void register(CustomerRegistrationRequest request) {
         Customer customer = Customer.builder()
@@ -22,10 +23,19 @@ public class CustomerService {
                 .build();
         repository.saveAndFlush(customer);
 
-        FraudCheckResponse checkResponse = client.isFraudster(customer.getId());
+        FraudCheckResponse checkResponse = fraudClient.isFraudster(customer.getId());
 
         if (checkResponse.isFraudster()) {
             throw new IllegalArgumentException("Customer is Fraudster!");
         }
+
+        notificationClient.sendNotification(
+                new NotificationRequest(
+                        customer.getId(),
+                        customer.getEmail(),
+                        String.format("Hi %s, welcome to My_MicroServices...",
+                                customer.getFirstName())
+                )
+        );
     }
 }
