@@ -1,10 +1,10 @@
 package org.micro.customer;
 
 import lombok.AllArgsConstructor;
-import org.micro.clients.notification.NotificationClient;
-import org.micro.clients.notification.NotificationRequest;
+import org.micro.amqp.RabbitMQMessageProducer;
 import org.micro.clients.fraud.FraudCheckResponse;
 import org.micro.clients.fraud.FraudClient;
+import org.micro.clients.notification.NotificationRequest;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,7 +13,8 @@ public class CustomerService {
 
     private final CustomerRepository repository;
     private final FraudClient fraudClient;
-    private final NotificationClient notificationClient;
+    private final RabbitMQMessageProducer rabbitMQMessageProducer;
+
 
     public void register(CustomerRegistrationRequest request) {
         Customer customer = Customer.builder()
@@ -29,13 +30,17 @@ public class CustomerService {
             throw new IllegalArgumentException("Customer is Fraudster!");
         }
 
-        notificationClient.sendNotification(
-                new NotificationRequest(
-                        customer.getId(),
-                        customer.getEmail(),
-                        String.format("Hi %s, welcome to My_MicroServices...",
-                                customer.getFirstName())
-                )
+        NotificationRequest notificationRequest = new NotificationRequest(
+                customer.getId(),
+                customer.getEmail(),
+                String.format("Hi %s, welcome to My_MicroServices...",
+                        customer.getFirstName())
+        );
+
+        rabbitMQMessageProducer.publish(
+                notificationRequest,
+                "internal.exchange",
+                "internal.notification.routing-key"
         );
     }
 }
